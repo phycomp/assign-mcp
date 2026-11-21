@@ -82,7 +82,7 @@ Check `busy`, `activity`, `waitingForTeammates` to know if work is in progress.
 ## Gotchas
 
 - **Task creation auto-activates** — the new task becomes the bot's active task. If the bot was busy on another task, switch back with `switch_task` when done.
-- **Channel default responder** — check `defaultResponder` (kind: everyone/mentions/member). With `mentions`, only @-mentioned bots respond. **Important**: use a prefixed name (e.g., `@agent-CEO`, `@agent-MarketSales`) instead of bare `@CEO` / `@MarketSales` — bare names may conflict with skill names or other triggers. The `mentions` array is for **disambiguation** (when multiple bots share a name), not for specifying recipients.
+- **Channel default responder** — check `defaultResponder` (kind: everyone/mentions/member). With `mentions`, only @-mentioned bots respond. **Important**: use a prefixed name (e.g., `~agent-CEO`, `~agent-MarketSales`) in this skill's documentation to avoid conflicts with skill names. When actually calling `send_channel_message` / `send_bot_message`, replace `~` with `@` (e.g., `@agent-CEO`) — OpenMausBot uses `@name` for mentions. The `mentions` array is for **disambiguation** (when multiple bots share a name), not for specifying recipients.
 - **Busy channels can't switch** — `switch_task` on a busy channel will fail. Wait or interrupt first.
 - **Idempotent sends** — use `send_id` to avoid duplicate messages on retry.
 - **Model selection** — bots have their own model (instanceId/model). Check before assigning complex tasks; some models are weaker.
@@ -133,7 +133,7 @@ t3 = create_task(target_type="channel", target_id=<channel_id>, title="Team C")
 # 2. Send kickoff messages
 send_bot_message(bot_id=<mausbot_id>, task_id=t1.taskId, text="Research task description...")
 send_bot_message(bot_id=<devbot_id>, task_id=t2.taskId, text="Build task description...")
-send_channel_message(channel_id=<channel_id>, task_id=t3.taskId, text="@agent-CEO @agent-MarketSales @agent-PR @agent-VP Team task description...", mentions=[...])
+send_channel_message(channel_id=<channel_id>, task_id=t3.taskId, text="~agent-CEO ~agent-MarketSales ~agent-PR ~agent-VP Team task description...", mentions=[...])
 
 # 3. Track
 get_bot_messages(bot_id=<mausbot_id>, task_id=t1.taskId, limit=10)
@@ -149,7 +149,7 @@ interrupt_conversation(target_type="bot", target_id=<bot_id>, task_id=<taskId>)
 - ❌ Don't forget to include `task_id` in send — otherwise it goes to the bot's currently active task, which may not be the one you just created.
 - ❌ Don't assume all bots in a channel will respond — check `defaultResponder` and use `mentions`.
 - ❌ Don't send duplicate messages without `send_id` on retry.
-- ❌ Don't use `@all` in channel messages — use prefixed bot names (`@agent-CEO`, `@agent-MarketSales`). `@all` may not trigger responses, and bare names may conflict with skill names.
+- ❌ Don't use `~all` in channel messages — use prefixed bot names (`~agent-CEO`, `~agent-MarketSales`). `~all` may not trigger responses, and bare names may conflict with skill names.
 - ❌ Don't assign browser-dependent tasks to bots without verifying the OpenMausBot desktop app is running.
 - ❌ Don't ignore `busy`/`activity` state — poll before sending follow-up messages.
 
