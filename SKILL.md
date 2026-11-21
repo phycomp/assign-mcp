@@ -82,12 +82,45 @@ Check `busy`, `activity`, `waitingForTeammates` to know if work is in progress.
 ## Gotchas
 
 - **Task creation auto-activates** — the new task becomes the bot's active task. If the bot was busy on another task, switch back with `switch_task` when done.
-- **Channel default responder** — check `defaultResponder` (kind: everyone/mentions/member). With `mentions`, only @-mentioned bots respond.
+- **Channel default responder** — check `defaultResponder` (kind: everyone/mentions/member). With `mentions`, only @-mentioned bots respond. **Important**: use specific bot names (e.g., `@CEO`, `@MarketSales`), not `@all` — `@all` may not trigger responses. The `mentions` array is for **disambiguation** (when multiple bots share a name), not for specifying recipients.
 - **Busy channels can't switch** — `switch_task` on a busy channel will fail. Wait or interrupt first.
 - **Idempotent sends** — use `send_id` to avoid duplicate messages on retry.
 - **Model selection** — bots have their own model (instanceId/model). Check before assigning complex tasks; some models are weaker.
 - **Channel bulletin** — the bulletin field sets shared instructions for all members. Update it when team context changes.
 - **Messages may trigger external tools** — bots can use external tools (web search, file access). This is expected but monitor for unexpected actions.
+- **External tool limitation** — bots may fail when trying to use desktop/browser tools if the OpenMausBot desktop app is not running. If a bot reports "Only the OpenMausBot app on this computer can let a bot use it", either open the desktop app or rephrase the task to avoid browser-dependent operations (e.g., ask for text-only research).
+- **No response from channel** — if no bot responds after sending to a channel, check: (1) `defaultResponder` kind, (2) whether @mentions use correct bot names, (3) whether bots are busy. Try sending to individual bots instead of the channel.
+
+## Progress Tracking
+
+### Polling pattern
+
+After sending a kickoff message, poll for results:
+
+```
+# Check bot status
+list_bots() / list_channels()  → busy, activity, waitingForTeammates
+
+# Read messages
+get_bot_messages(bot_id, task_id, limit=20)
+get_channel_messages(channel_id, task_id, limit=40)
+
+# Check if done
+activity == "idle" and busy == false → likely complete
+```
+
+### Timeout handling
+
+- If a bot shows `busy=true` for > 5 minutes, consider interrupting: `interrupt_conversation(target_type, target_id, task_id)`
+- If no response after 3 minutes, re-send with a simpler task or switch to a different bot
+- For channel tasks, poll each member individually if the channel shows no activity
+
+### Completion criteria
+
+A task is complete when:
+- Bot's `activity == "idle"` and `busy == false`
+- At least one bot message (role="bot") exists after the kickoff
+- The message contains substantive content (not just an error)
 
 ## Example: Assign 3 parallel tasks
 
@@ -116,6 +149,9 @@ interrupt_conversation(target_type="bot", target_id=<bot_id>, task_id=<taskId>)
 - ❌ Don't forget to include `task_id` in send — otherwise it goes to the bot's currently active task, which may not be the one you just created.
 - ❌ Don't assume all bots in a channel will respond — check `defaultResponder` and use `mentions`.
 - ❌ Don't send duplicate messages without `send_id` on retry.
+- ❌ Don't use `@all` in channel messages — use specific bot names (`@CEO`, `@MarketSales`). `@all` may not trigger responses.
+- ❌ Don't assign browser-dependent tasks to bots without verifying the OpenMausBot desktop app is running.
+- ❌ Don't ignore `busy`/`activity` state — poll before sending follow-up messages.
 
 ## References
 - OpenMausBot MCP tools: list_bots, list_channels, create_task, send_bot_message, send_channel_message, get_bot_messages, get_channel_messages, interrupt_conversation, switch_task, rename_task, search_messages
