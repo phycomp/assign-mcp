@@ -28,4 +28,3 @@ Trigger phrases: "assign task to bot", "OpenMausBot", "create channel", "kickoff
 ## License
 
 MIT
-EOF
